@@ -1,6 +1,6 @@
 ---
 title: "Welcome to Your Blog"
-date: "2025-01-15"
+date: "2025-01-15T11:30:00"
 description: "Your first blog post - customize this to get started!"
 tags: ["welcome", "getting-started", "blog"]
 ---

@@ -84,7 +84,11 @@ fn extract_text_preview(markdown: &str, max_chars: usize) -> String {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PostMetadata {
   pub title: String,
-  pub date: String,
+  pub date: String, // Full datetime for sorting and SEO (YYYY-MM-DDTHH:MM:SS)
+  #[serde(default)]
+  pub display_date: String, // Display date only (YYYY-MM-DD) for post cards
+  #[serde(default)]
+  pub display_datetime: String, // Display date and time (YYYY-MM-DD HH:MM) for post detail page
   pub tags: Vec<String>,
   pub description: String,
 }
@@ -116,8 +120,24 @@ impl Post {
     let front_matter = parts[1].trim();
     let content = parts[2..].join("---").trim().to_string();
 
-    let metadata: PostMetadata = serde_yaml::from_str(front_matter)
+    let mut metadata: PostMetadata = serde_yaml::from_str(front_matter)
       .map_err(|e| format!("Failed to parse front matter: {}", e))?;
+
+    // Extract display_date (date only: YYYY-MM-DD) for post cards
+    metadata.display_date = if metadata.date.len() >= 10 {
+      metadata.date[..10].to_string()
+    } else {
+      metadata.date.clone()
+    };
+
+    // Format display_datetime (date and time: YYYY-MM-DD HH:MM) for post detail page
+    metadata.display_datetime = if metadata.date.len() >= 16 {
+      format!("{} {}", &metadata.date[..10], &metadata.date[11..16])
+    } else if metadata.date.len() >= 10 {
+      metadata.date[..10].to_string()
+    } else {
+      metadata.date.clone()
+    };
 
     let html_content = markdown_to_html(&content);
     

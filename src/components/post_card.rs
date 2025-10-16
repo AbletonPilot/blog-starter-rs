@@ -5,7 +5,7 @@ use leptos::prelude::*;
 pub fn PostSummaryCard(post: PostSummary) -> impl IntoView {
   let slug = post.slug.clone();
   let title = post.metadata.title.clone();
-  let date = post.metadata.date.clone();
+  let display_date = post.metadata.display_date.clone();
   let description = post.metadata.description.clone();
   let tags = post.metadata.tags.clone();
   let thumbnail = post.thumbnail.clone();
@@ -23,7 +23,7 @@ pub fn PostSummaryCard(post: PostSummary) -> impl IntoView {
       <div class="post-content">
         <h2><a href=format!("/posts/{}", slug)>{title}</a></h2>
         <div class="post-meta">
-          <span class="date">{date}</span>
+          <span class="date">{display_date}</span>
           <span class="tags">
             {tags.iter().map(|tag| {
               let tag_text = tag.clone();
