@@ -1,5 +1,86 @@
 use serde::{Deserialize, Serialize};
 
+/// Extract the first image URL from markdown content
+fn extract_thumbnail(markdown: &str) -> Option<String> {
+  for line in markdown.lines() {
+    let trimmed = line.trim();
+    // Match markdown image: ![alt](url)
+    if trimmed.starts_with("!") && trimmed.contains("](") {
+      if let Some(start) = trimmed.find("](") {
+        if let Some(end) = trimmed[start + 2..].find(")") {
+          let url = &trimmed[start + 2..start + 2 + end];
+          return Some(url.to_string());
+        }
+      }
+    }
+    // Match HTML img tag: <img src="url"
+    if trimmed.contains("<img") && trimmed.contains("src=") {
+      if let Some(start) = trimmed.find("src=\"") {
+        if let Some(end) = trimmed[start + 5..].find("\"") {
+          let url = &trimmed[start + 5..start + 5 + end];
+          return Some(url.to_string());
+        }
+      }
+    }
+  }
+  None
+}
+
+/// Extract plain text from markdown content (removes formatting)
+fn extract_text_preview(markdown: &str, max_chars: usize) -> String {
+  let mut result = String::new();
+  let mut in_code_block = false;
+  let mut chars_count = 0;
+  
+  for line in markdown.lines() {
+    // Skip code blocks
+    if line.trim().starts_with("```") {
+      in_code_block = !in_code_block;
+      continue;
+    }
+    if in_code_block {
+      continue;
+    }
+    
+    // Skip images
+    if line.trim().starts_with("!") && line.contains("](") {
+      continue;
+    }
+    
+    // Skip empty lines
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+      continue;
+    }
+    
+    // Remove markdown formatting
+    let clean_line = trimmed
+      .trim_start_matches(|c| c == '#' || c == ' ')
+      .replace("**", "")
+      .replace("*", "")
+      .replace("__", "")
+      .replace("_", "");
+    
+    // Add to result
+    if !result.is_empty() {
+      result.push(' ');
+    }
+    result.push_str(&clean_line);
+    
+    chars_count = result.chars().count();
+    if chars_count >= max_chars {
+      break;
+    }
+  }
+  
+  // Truncate to max_chars
+  if chars_count > max_chars {
+    result.chars().take(max_chars).collect::<String>() + "..."
+  } else {
+    result
+  }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PostMetadata {
   pub title: String,
@@ -13,12 +94,15 @@ pub struct Post {
   pub slug: String,
   pub metadata: PostMetadata,
   pub content: String,
+  pub preview: String, // Text preview from content for SEO
+  pub thumbnail: Option<String>, // First image URL for thumbnails
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PostSummary {
   pub slug: String,
   pub metadata: PostMetadata,
+  pub thumbnail: Option<String>, // First image URL for thumbnails
 }
 
 impl Post {
@@ -36,11 +120,19 @@ impl Post {
       .map_err(|e| format!("Failed to parse front matter: {}", e))?;
 
     let html_content = markdown_to_html(&content);
+    
+    // Extract preview text from markdown content (max 160 chars for SEO)
+    let preview = extract_text_preview(&content, 160);
+    
+    // Extract first image URL for thumbnail
+    let thumbnail = extract_thumbnail(&content);
 
     Ok(Post {
       slug,
       metadata,
       content: html_content,
+      preview,
+      thumbnail,
     })
   }
 }
@@ -223,6 +315,7 @@ pub fn load_post_summaries() -> Vec<PostSummary> {
     .map(|post| PostSummary {
       slug: post.slug,
       metadata: post.metadata,
+      thumbnail: post.thumbnail,
     })
     .collect()
 }
