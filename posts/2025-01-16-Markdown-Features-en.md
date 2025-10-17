@@ -1,6 +1,6 @@
 ---
 title: "Markdown Features Demo"
-date: 2025-01-16T17:30:00
+date: 2025-01-16T17:30:00Z
 description: "A showcase of all the Markdown features supported in this blog"
 tags: ["markdown", "tutorial", "demo"]
 ---
